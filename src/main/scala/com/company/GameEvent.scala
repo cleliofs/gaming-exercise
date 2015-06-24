@@ -14,7 +14,7 @@ case class GameEvent(time: Int, totalPointsTeam1: Int, totalPointsTeam2: Int, wh
    *
    * @return
    */
-  override def toString() = {
+  override def toString = {
     def printTime(time: Int) = if (time < 60) s"$time secs" else s"${time/60}:${(time%60).toString.padTo(2, '0')}"
     def printPoints(points: Int) = if (points == 1) s"single point" else s"$points-point shot"
     def printTeam(team: Int) = if (team == 0) "Team 1" else "Team 2"
