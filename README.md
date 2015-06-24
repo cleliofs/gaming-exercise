@@ -46,11 +46,16 @@ Unused | Match time (secs) | Team 1 points total |Team 2 points total | Who scor
 
 Bits Value Description
 0 - 1 Points scored Number of points scored (either 1, 2 or 3)
+
 2 Who scored 0 indicates team 1 scored, 1 indicates team 2
+
 3 - 10 Team 2 points total The total number of points team 2 has scored in the match.
+
 11 - 18 Team 1 points total The total number of points team 1 has scored in the match.
+
 19 - 30 Elapsed match time Number of seconds since the start of the match. This represents the match
 clock, rather than “wall clock” time.
+
 
 If after 15 seconds of play, Team 1 scores 2 points, then the following will be received:
 0x781002 = 7868418 = 0 000000001111 00000010 00000000 0 10

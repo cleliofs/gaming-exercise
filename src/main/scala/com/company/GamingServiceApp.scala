@@ -4,7 +4,7 @@ package com.company
 import scala.io.Source
 
 /**
- * Gaming service app
+ * Gaming service app to test the game event streams processing from files
  *
  * Created by clelio on 23/06/15.
  */
@@ -12,6 +12,7 @@ import scala.io.Source
 object GamingServiceApp extends App {
   val gamingService = new GamingServiceImpl
 
+  // replace 'sample2.txt' file for another, if you wish
   val source = Source.fromFile("src/main/resources/sample2.txt")
 
   // push events stream to gaming service
@@ -28,6 +29,10 @@ object GamingServiceApp extends App {
 
   val lastEvent = gamingService.lastEvent
   if (lastEvent.isDefined) println(s"\nShow last recorded valid event: ${lastEvent.get}")
+
+  println(s"\nShow all events for Team 1: ")
+  val allEventsByTeam1 = gamingService.eventsByTeam(0)
+  allEventsByTeam1.foreach(println)
 
 }
 

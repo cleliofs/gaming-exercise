@@ -1,12 +1,19 @@
 package com.company
 
 /**
- * Game event case class
+ * Game event case class to help with the pattern matching of the stream feed.
  *
  * Created by clelio on 24/06/15.
  */
 case class GameEvent(time: Int, totalPointsTeam1: Int, totalPointsTeam2: Int, whoScored: Int, pointsScored: Int) {
 
+  /**
+   * Overridden toString method to return a nice game event string based representation.
+   *
+   * It uses string interpolation and inner local methods as facilitators
+   *
+   * @return
+   */
   override def toString() = {
     def printTime(time: Int) = if (time < 60) s"$time secs" else s"${time/60}:${(time%60).toString.padTo(2, '0')}"
     def printPoints(points: Int) = if (points == 1) s"single point" else s"$points-point shot"
