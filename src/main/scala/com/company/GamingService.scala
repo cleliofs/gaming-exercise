@@ -9,7 +9,7 @@ import scala.collection.mutable.ArrayBuffer
  */
 sealed trait GamingService {
 
-  def receive(gameEvent: String): Unit
+  def receive(gameEvent: String): Option[GameEvent]
 
   def allEvents: Seq[GameEvent]
 
@@ -32,7 +32,7 @@ class GamingServiceImpl extends GamingService {
   val EventStreamPattern = """[01]{1}([01]{12})([01]{8})([01]{8})([01]{1})([01]{2})""".r
   var events: collection.mutable.ArrayBuffer[GameEvent] = new ArrayBuffer()
 
-  override def receive(gameEventStr: String): Unit = {
+  override def receive(gameEventStr: String): Option[GameEvent] = {
     def isValidEvent(gameEvent: GameEvent): Boolean = {
       val toValidate = (lastEvent, gameEvent.time, 1 to 3 contains gameEvent.pointsScored, gameEvent.pointsScored, gameEvent.whoScored, gameEvent.totalPointsTeam1, gameEvent.totalPointsTeam2)
       toValidate match {
@@ -53,9 +53,9 @@ class GamingServiceImpl extends GamingService {
           if (isValidEvent(event)) Some(event) else None
         }
       }
-
       if (e.isDefined) events += e.get
-    }
+      e
+    } else None
   }
 
   def allEvents = if (events.isEmpty) Seq() else events
