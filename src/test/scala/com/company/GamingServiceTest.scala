@@ -15,7 +15,7 @@ class GamingServiceTest extends FunSuite {
     val event = ""
     underTest.receive(event)
     val events = underTest.allEvents
-    assert(events.size == 0)
+    assert(events.isEmpty)
   }
 
   test("The first valid event should be recorded properly") {
@@ -26,6 +26,15 @@ class GamingServiceTest extends FunSuite {
     assert(events.size == 1)
     val lastEvent = underTest.lastEvent
     assert(lastEvent != null)
+  }
+
+
+  test("A nonsense event should be discarded") {
+    val underTest = new GamingServiceImpl
+    val event = "nonesense"
+    underTest.receive(event)
+    val events = underTest.allEvents
+    assert(events.isEmpty)
   }
 
   test("The second valid event should be recorded properly") {
@@ -46,7 +55,7 @@ class GamingServiceTest extends FunSuite {
     val underTest = new GamingServiceImpl
     val event2 = "0xf81016"
     underTest.receive(event2)
-    assert(underTest.allEvents.size == 0, event2)
+    assert(underTest.allEvents.isEmpty, event2)
   }
 
   test("Gaming service should acknowledge all events from sample1.txt") {
@@ -108,7 +117,7 @@ class GamingServiceTest extends FunSuite {
 
   test("Last scored points in the match for sample2.txt file") {
     val underTest = new GamingServiceImpl
-    assert(underTest.lastScoredPoints == None)
+    assert(underTest.lastScoredPoints.isEmpty)
 
     val events = io.Source.fromFile("src/test/resources/sample2.txt").getLines()
     events.foreach(underTest.receive)
@@ -119,7 +128,7 @@ class GamingServiceTest extends FunSuite {
 
   test("At what time through the match was the last point scored in the match for sample2.txt file") {
     val underTest = new GamingServiceImpl
-    assert(underTest.timeForLastScoredPoints == None)
+    assert(underTest.timeForLastScoredPoints.isEmpty)
 
     val events = io.Source.fromFile("src/test/resources/sample2.txt").getLines()
     events.foreach(underTest.receive)
@@ -130,7 +139,7 @@ class GamingServiceTest extends FunSuite {
 
   test("What is the latest the score in the match for sample2.txt file") {
     val underTest = new GamingServiceImpl
-    assert(underTest.latestScore == None)
+    assert(underTest.latestScore.isEmpty)
 
     val events = io.Source.fromFile("src/test/resources/sample2.txt").getLines()
     events.foreach(underTest.receive)
@@ -139,5 +148,31 @@ class GamingServiceTest extends FunSuite {
     assert(underTest.latestScore.get == (8, 11)) // Team-1 8 vs 11 Team-2
   }
 
+  test("All events recorded by Team 1 in sample2.txt should match") {
+    val underTest = new GamingServiceImpl
+    assert(underTest.latestScore.isEmpty)
+
+    val events = io.Source.fromFile("src/test/resources/sample2.txt").getLines()
+    events.foreach(underTest.receive)
+    assert(underTest.allEvents.size == 9)
+
+    val eventsByTeam1 = underTest.eventsByTeam(0)
+    assert(eventsByTeam1.size == 4)
+    assert(eventsByTeam1.map(_.toString()).contains("At 15 secs, a 2-point shot for Team 1 was scored - match result: Team-1 2 vs 0 Team-2"))
+    assert(eventsByTeam1.map(_.toString()).contains("At 1:15, a 2-point shot for Team 1 was scored - match result: Team-1 4 vs 5 Team-2"))
+    assert(eventsByTeam1.map(_.toString()).contains("At 2:20, a 3-point shot for Team 1 was scored - match result: Team-1 7 vs 9 Team-2"))
+    assert(eventsByTeam1.map(_.toString()).contains("At 2:48, a single point for Team 1 was scored - match result: Team-1 8 vs 11 Team-2"))
+  }
+  
+  test("Last event recorded by Team 1 in sample2.txt should match") {
+    val underTest = new GamingServiceImpl
+    assert(underTest.latestScore.isEmpty)
+
+    val events = io.Source.fromFile("src/test/resources/sample2.txt").getLines()
+    events.foreach(underTest.receive)
+    assert(underTest.allEvents.size == 9)
+
+    assert(underTest.lastEventScoredByTeam(0).get.toString() == "At 2:48, a single point for Team 1 was scored - match result: Team-1 8 vs 11 Team-2")
+  }
 
 }
