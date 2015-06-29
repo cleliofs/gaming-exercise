@@ -141,7 +141,7 @@ class GamingServiceImpl extends GamingService {
 
   def lastEvent: Option[GameEvent] = events.lastOption
 
-  def lastEvents(n: Int): Seq[GameEvent] = if (events.isEmpty || events.size < n) Seq() else events.takeRight(n)
+  def lastEvents(n: Int): Seq[GameEvent] = if (events.isEmpty || events.size <= n) events else events.takeRight(n)
 
   def lastTeamToScore = if (events.isEmpty) None else Some(events.last.whoScored)
 
