@@ -18,7 +18,7 @@ sealed trait GamingService {
    *
    * @param gameEventStr
    */
-  def receive(gameEventStr: String): Unit
+  def receive(gameEventStr: String): Option[GameEvent]
 
   /**
    * Returns all recorded valid events. It returns
@@ -101,7 +101,8 @@ class GamingServiceImpl extends GamingService {
   // visibility to private object level only
   private[this] var events: collection.mutable.ArrayBuffer[GameEvent] = new ArrayBuffer()
 
-  def receive(gameEventStr: String): Unit = {
+  def receive(gameEventStr: String): Option[GameEvent]  = {
+
     def isValidEvent(gameEvent: GameEvent): Boolean = {
       val toValidate = (lastEvent, gameEvent.time, 1 to 3 contains gameEvent.pointsScored, gameEvent.pointsScored, gameEvent.whoScored, gameEvent.totalPointsTeam1, gameEvent.totalPointsTeam2)
       toValidate match {
@@ -132,9 +133,9 @@ class GamingServiceImpl extends GamingService {
           if (isValidEvent(event)) Some(event) else None
         }
       }
-
       if (e.isDefined) events += e.get
-    }
+      e
+    } else None
   }
 
   def allEvents = if (events.isEmpty) Seq() else events
