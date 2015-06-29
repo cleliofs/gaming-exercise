@@ -1,6 +1,7 @@
 package com.company
 
 import scala.collection.mutable.ArrayBuffer
+import scala.util.{Failure, Success, Try}
 
 /**
  * Gaming Service which provides method to gather events from the events streams
@@ -116,17 +117,17 @@ class GamingServiceImpl extends GamingService {
       }
     }
 
-    def extractBinaryEventFormat(s: String): Option[String] = {
+    def extractBinaryEventFormat(s: String): Try[String] = {
       try {
-        Some(Integer.parseInt(s.trim().drop(2), 16).toBinaryString.reverse.padTo(32, '0').reverse)
+        Success(Integer.parseInt(s.trim().drop(2), 16).toBinaryString.reverse.padTo(32, '0').reverse)
       } catch {
-        case e: Throwable => None
+        case e: Throwable => Failure(e)
       }
     }
 
     val eventInBinaryFormat = extractBinaryEventFormat(gameEventStr)
 
-    if (eventInBinaryFormat.isDefined) {
+    if (eventInBinaryFormat.isSuccess) {
       val e: Option[GameEvent] =  eventInBinaryFormat.get match {
         case EventStreamPattern(time, totalPointsT1, totalPointsT2, whoScored, pointsScored) => {
           val event = GameEvent(Integer parseInt(time, 2), Integer.parseInt(totalPointsT1, 2), Integer.parseInt(totalPointsT2, 2), Integer.parseInt(whoScored, 2), Integer.parseInt(pointsScored, 2))
