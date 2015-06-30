@@ -117,26 +117,21 @@ class GamingServiceImpl extends GamingService {
       }
     }
 
-    def extractBinaryEventFormat(s: String): Try[String] = {
-      try {
-        Success(Integer.parseInt(s.trim().drop(2), 16).toBinaryString.reverse.padTo(32, '0').reverse)
-      } catch {
-        case e: Throwable => Failure(e)
-      }
-    }
+    def extractBinaryEventFormat(s: String): Try[String] = Try(Integer.parseInt(s.trim().drop(2), 16).toBinaryString.reverse.padTo(32, '0').reverse)
 
-    val eventInBinaryFormat = extractBinaryEventFormat(gameEventStr)
-
-    if (eventInBinaryFormat.isSuccess) {
-      val e: Option[GameEvent] =  eventInBinaryFormat.get match {
-        case EventStreamPattern(time, totalPointsT1, totalPointsT2, whoScored, pointsScored) => {
-          val event = GameEvent(Integer parseInt(time, 2), Integer.parseInt(totalPointsT1, 2), Integer.parseInt(totalPointsT2, 2), Integer.parseInt(whoScored, 2), Integer.parseInt(pointsScored, 2))
-          if (isValidEvent(event)) Some(event) else None
+    extractBinaryEventFormat(gameEventStr) match {
+      case Success(evStr) =>
+        val event: Option[GameEvent] =  evStr match {
+          case EventStreamPattern(time, totalPointsT1, totalPointsT2, whoScored, pointsScored) => {
+            val event = GameEvent(Integer parseInt(time, 2), Integer.parseInt(totalPointsT1, 2), Integer.parseInt(totalPointsT2, 2), Integer.parseInt(whoScored, 2), Integer.parseInt(pointsScored, 2))
+            if (isValidEvent(event)) Some(event) else None
+          }
         }
-      }
-      if (e.isDefined) events += e.get
-      e
-    } else None
+
+        if (event.isDefined) events += event.get
+        event
+      case Failure(e) => None
+    }
   }
 
   def allEvents = if (events.isEmpty) Seq() else events
