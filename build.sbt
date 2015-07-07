@@ -2,6 +2,8 @@ import spray.revolver.RevolverPlugin.Revolver
 
 name := """gaming-exercise-microservice"""
 
+description := "This is a Akka HTTP microservice application"
+
 organization := "com.company"
 
 version := "1.0"
@@ -26,3 +28,5 @@ libraryDependencies ++= {
 }
 
 Revolver.settings
+
+

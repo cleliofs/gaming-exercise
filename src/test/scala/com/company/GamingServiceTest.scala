@@ -103,7 +103,6 @@ class GamingServiceTest extends FunSuite {
 
     val allEvents = underTest.allEvents
     assert(allEvents.size == 9)
-    assert(underTest.lastEvents(99) == Seq())
   }
 
   test("Last team to score in the match for sample2.txt file") {
