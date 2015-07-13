@@ -17,6 +17,7 @@ libraryDependencies ++= {
   val akkaStreamV = "1.0-RC4"
   val scalaTestV  = "2.2.4"
   Seq(
+    "org.scalaz"        %% "scalaz-core"                          % "7.1.3",
     "com.typesafe.akka" %% "akka-actor"                           % akkaV,
     "com.typesafe.akka" %% "akka-stream-experimental"             % akkaStreamV,
     "com.typesafe.akka" %% "akka-http-core-experimental"          % akkaStreamV,
