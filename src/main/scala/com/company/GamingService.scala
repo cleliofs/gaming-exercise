@@ -95,9 +95,11 @@ sealed trait GamingService {
    * @return the last event by team, or Option.None where there is no recorded event
    */
   def lastEventScoredByTeam(team: Int): Option[GameEvent]
+
+  def invalidEvents: Seq[InvalidEvent]
 }
 
-case class InvalidEvent(reason: String)
+case class InvalidEvent(event: GameEvent, reason: String)
 
 
 class GamingServiceImpl extends GamingService {
@@ -107,86 +109,75 @@ class GamingServiceImpl extends GamingService {
   // visibility to private object level only
   private[this] var events: collection.mutable.ArrayBuffer[GameEvent] = new ArrayBuffer()
 
-  def receive(gameEventStr: String): Option[GameEvent]  = {
+  private[this] var _invalidEvents: collection.mutable.ArrayBuffer[InvalidEvent] = new ArrayBuffer()
+
+  def receive(gameEventStr: String): Option[GameEvent] = {
 
     def validateEvent(gameEvent: GameEvent): ValidationNel[InvalidEvent, Boolean] = {
       val toValidate = (lastEvent, gameEvent.time, 1 to 3 contains gameEvent.pointsScored, gameEvent.pointsScored, gameEvent.whoScored, gameEvent.totalPointsTeam1, gameEvent.totalPointsTeam2)
 
       def validatePoints(gameEvent: GameEvent): ValidationNel[InvalidEvent, Boolean] = toValidate match {
-        case (_, _, false, _, _, _, _) => failureNel(InvalidEvent("Points scored outside possible input"))
+        case (_, _, false, _, _, _, _) => failureNel(InvalidEvent(gameEvent, "Points scored outside possible input"))
         case _ => success(true)
       }
 
       def validateFirstPointsForTeam1NotComputed(gameEvent: GameEvent): ValidationNel[InvalidEvent, Boolean] = toValidate match {
-        case (None, _, true, points, 0, pointsT1, pointsT2) if pointsT1 != points => failureNel(InvalidEvent("First points of the match scored for Team 1 not computed"))
+        case (None, _, true, points, 0, pointsT1, pointsT2) if pointsT1 != points => failureNel(InvalidEvent(gameEvent, "First points of the match scored for Team 1 not computed"))
         case _ => success(true)
       }
 
       def validateFirstPointsForTeam2NotComputed(gameEvent: GameEvent): ValidationNel[InvalidEvent, Boolean] = toValidate match {
-        case (None, _, true, points, 1, pointsT1, pointsT2) if pointsT2 != points => failureNel(InvalidEvent("First points of the match scored for Team 2 not computed"))
+        case (None, _, true, points, 1, pointsT1, pointsT2) if pointsT2 != points => failureNel(InvalidEvent(gameEvent, "First points of the match scored for Team 2 not computed"))
         case _ => success(true)
       }
 
       def validateFirstPointsForTeam1(gameEvent: GameEvent): ValidationNel[InvalidEvent, Boolean] = toValidate match {
-        case (None, _, true, points, 0, pointsT1, pointsT2) if pointsT2 != 0 => failureNel(InvalidEvent("First points of the match scored for Team 1. Invalid score for Team 2"))
+        case (None, _, true, points, 0, pointsT1, pointsT2) if pointsT2 != 0 => failureNel(InvalidEvent(gameEvent, "First points of the match scored for Team 1. Invalid score for Team 2"))
         case _ => success(true)
       }
 
       def validateFirstPointsForTeam2(gameEvent: GameEvent): ValidationNel[InvalidEvent, Boolean] = toValidate match {
-        case (None, _, true, points, 1, pointsT1, pointsT2) if pointsT1 != 0 => failureNel(InvalidEvent("First points of the match scored for Team 2. Invalid score for Team 1"))
+        case (None, _, true, points, 1, pointsT1, pointsT2) if pointsT1 != 0 => failureNel(InvalidEvent(gameEvent, "First points of the match scored for Team 2. Invalid score for Team 1"))
         case _ => success(true)
       }
 
       def validateCurrentEventTiming(gameEvent: GameEvent): ValidationNel[InvalidEvent, Boolean] = toValidate match {
-        case (Some(e), time, _, _, _, _, _) if e.time > time => failureNel(InvalidEvent("Current event timing is invalid (> last recorded event)"))
+        case (Some(e), time, _, _, _, _, _) if e.time > time => failureNel(InvalidEvent(gameEvent, "Current event timing is invalid (> last recorded event)"))
         case _ => success(true)
       }
 
       def validateScoreForTeam1(gameEvent: GameEvent): ValidationNel[InvalidEvent, Boolean] = toValidate match {
-        case (Some(e), _, true, points, 0, pointsT1, pointsT2) if pointsT1 != e.totalPointsTeam1 + points => failureNel(InvalidEvent("Team 1 score is invalid"))
+        case (Some(e), _, true, points, 0, pointsT1, pointsT2) if pointsT1 != e.totalPointsTeam1 + points => failureNel(InvalidEvent(gameEvent, "Team 1 score is invalid"))
         case _ => success(true)
       }
 
       def validateScoreForTeam2(gameEvent: GameEvent): ValidationNel[InvalidEvent, Boolean] = toValidate match {
-        case (Some(e), _, true, points, 1, pointsT1, pointsT2) if pointsT2 != e.totalPointsTeam2 + points => failureNel(InvalidEvent("Team 2 score is invalid"))
+        case (Some(e), _, true, points, 1, pointsT1, pointsT2) if pointsT2 != e.totalPointsTeam2 + points => failureNel(InvalidEvent(gameEvent, "Team 2 score is invalid"))
         case _ => success(true)
       }
 
       def validateRecordedPointsForTeam1(gameEvent: GameEvent): ValidationNel[InvalidEvent, Boolean] = toValidate match {
-        case (Some(e), _, true, points, 0, pointsT1, pointsT2) if pointsT2 != e.totalPointsTeam2 => failureNel(InvalidEvent("Invalid registered points for Team 2"))
+        case (Some(e), _, true, points, 0, pointsT1, pointsT2) if pointsT2 != e.totalPointsTeam2 => failureNel(InvalidEvent(gameEvent, "Invalid registered points for Team 2"))
         case _ => success(true)
       }
 
       def validateRecordedPointsForTeam2(gameEvent: GameEvent): ValidationNel[InvalidEvent, Boolean] = toValidate match {
-        case (Some(e), _, true, points, 1, pointsT1, pointsT2) if pointsT1 != e.totalPointsTeam1 => failureNel(InvalidEvent("Invalid registered points for Team 2"))
+        case (Some(e), _, true, points, 1, pointsT1, pointsT2) if pointsT1 != e.totalPointsTeam1 => failureNel(InvalidEvent(gameEvent, "Invalid registered points for Team 2"))
         case _ => success(true)
       }
 
       val valid = validatePoints(gameEvent) |@|
-                  validateFirstPointsForTeam1NotComputed(gameEvent) |@|
-                  validateFirstPointsForTeam2NotComputed(gameEvent) |@|
-                  validateFirstPointsForTeam1(gameEvent) |@|
-                  validateFirstPointsForTeam2(gameEvent) |@|
-                  validateCurrentEventTiming(gameEvent) |@|
-                  validateScoreForTeam1(gameEvent) |@|
-                  validateScoreForTeam2(gameEvent) |@|
-                  validateRecordedPointsForTeam1(gameEvent) |@|
-                  validateRecordedPointsForTeam2(gameEvent)
+        validateFirstPointsForTeam1NotComputed(gameEvent) |@|
+        validateFirstPointsForTeam2NotComputed(gameEvent) |@|
+        validateFirstPointsForTeam1(gameEvent) |@|
+        validateFirstPointsForTeam2(gameEvent) |@|
+        validateCurrentEventTiming(gameEvent) |@|
+        validateScoreForTeam1(gameEvent) |@|
+        validateScoreForTeam2(gameEvent) |@|
+        validateRecordedPointsForTeam1(gameEvent) |@|
+        validateRecordedPointsForTeam2(gameEvent)
       valid { (v1: Boolean, v2: Boolean, v3: Boolean, v4: Boolean, v5: Boolean, v6: Boolean, v7: Boolean, v8: Boolean, v9: Boolean, v10: Boolean) =>
-        true
-      }
-    }
-
-    def isValidEvent(gameEvent: GameEvent): Boolean = {
-      val toValidate = (lastEvent, gameEvent.time, 1 to 3 contains gameEvent.pointsScored, gameEvent.pointsScored, gameEvent.whoScored, gameEvent.totalPointsTeam1, gameEvent.totalPointsTeam2)
-      toValidate match {
-        case (_, _, false, _, _, _, _) => false
-        case (None, _, true, points, 0, pointsT1, pointsT2) if pointsT1 == points && pointsT2 == 0 => true
-        case (None, _, true, points, 1, pointsT1, pointsT2) if pointsT2 == points && pointsT1 == 0 => true
-        case (Some(e), time, _, _, _, _, _) if e.time > time => false
-        case (Some(e), _, true, points, 0, pointsT1, pointsT2) if (pointsT1 == e.totalPointsTeam1 + points) && (pointsT2 == e.totalPointsTeam2) => true
-        case (Some(e), _, true, points, 1, pointsT1, pointsT2) if (pointsT2 == e.totalPointsTeam2 + points) && (pointsT1 == e.totalPointsTeam1) => true
-        case _ => false
+        v1 && v2 && v3 && v4 && v5 && v6 && v7 && v8 && v9 && v10
       }
     }
 
@@ -196,11 +187,19 @@ class GamingServiceImpl extends GamingService {
 
     extractBinaryEventFormat(gameEventStr) match {
       case Success(evStr) =>
-        val event: Option[GameEvent] =  evStr match {
+        val event: Option[GameEvent] = evStr match {
           case EventStreamPattern(time, totalPointsT1, totalPointsT2, whoScored, pointsScored) => {
             val event = GameEvent(Integer parseInt(time, 2), Integer.parseInt(totalPointsT1, 2), Integer.parseInt(totalPointsT2, 2), Integer.parseInt(whoScored, 2), Integer.parseInt(pointsScored, 2))
-//            if (isValidEvent(event)) Some(event) else None
-            if (validateEvent(event).isSuccess) Some(event) else None
+            val validation: ValidationNel[InvalidEvent, Boolean] = validateEvent(event)
+            if (validation.isSuccess) {
+              Some(event)
+            } else {
+              validation match {
+                case scalaz.Failure(failureList) => failureList.foreach(_invalidEvents += _)
+                case scalaz.Success(ev) => ()
+              }
+              None
+            }
           }
         }
 
@@ -224,9 +223,11 @@ class GamingServiceImpl extends GamingService {
 
   def latestScore: Option[(Int, Int)] = if (events.isEmpty) None else Some((events.last.totalPointsTeam1, events.last.totalPointsTeam2))
 
-  def eventsByTeam(team: Int): Seq[GameEvent] = events.filter(_.whoScored==team)
+  def eventsByTeam(team: Int): Seq[GameEvent] = events.filter(_.whoScored == team)
 
   def lastEventScoredByTeam(team: Int) = eventsByTeam(team).lastOption
+
+  def invalidEvents: Seq[InvalidEvent] = if (_invalidEvents.isEmpty) Seq() else _invalidEvents
 
 }
 

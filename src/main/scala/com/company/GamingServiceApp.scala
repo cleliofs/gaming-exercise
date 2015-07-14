@@ -34,6 +34,9 @@ object GamingServiceApp extends App {
   val allEventsByTeam1 = gamingService.eventsByTeam(0)
   allEventsByTeam1.foreach(println)
 
+  println(s"\nShow all invalid events: ")
+  gamingService.invalidEvents.foreach(println)
+
 }
 
 
