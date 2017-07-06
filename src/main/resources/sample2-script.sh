@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 curl -X POST http://127.0.0.1:9000/input/0x781002
 curl -X POST http://127.0.0.1:9000/input/0xe01016
 curl -X POST http://127.0.0.1:9000/input/0x1081014

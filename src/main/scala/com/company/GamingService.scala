@@ -1,6 +1,8 @@
 package com.company
 
-import scala.collection.mutable.ArrayBuffer
+import java.lang.Integer.parseInt
+
+import scala.collection.immutable.Seq
 import scala.util.{Failure, Success, Try}
 import scalaz.Validation._
 import scalaz.ValidationNel
@@ -107,9 +109,9 @@ class GamingServiceImpl extends GamingService {
   private val EventStreamPattern = """[01]{1}([01]{12})([01]{8})([01]{8})([01]{1})([01]{2})""".r
 
   // visibility to private object level only
-  private[this] var events: collection.mutable.ArrayBuffer[GameEvent] = new ArrayBuffer()
+  private[this] var events: Seq[GameEvent] = Seq()
 
-  private[this] var _invalidEvents: collection.mutable.ArrayBuffer[InvalidEvent] = new ArrayBuffer()
+  private[this] var _invalidEvents: Seq[InvalidEvent] = Seq()
 
   def receive(gameEventStr: String): Option[GameEvent] = {
 
@@ -182,34 +184,43 @@ class GamingServiceImpl extends GamingService {
     }
 
     def extractBinaryEventFormat(s: String): Try[String] = Try {
-      Integer.parseInt(s.trim().drop(2), 16).toBinaryString.reverse.padTo(32, '0').reverse
+      parseInt(s.trim().drop(2), 16).toBinaryString.reverse.padTo(32, '0').reverse
     }
 
     extractBinaryEventFormat(gameEventStr) match {
       case Success(evStr) =>
-        val event: Option[GameEvent] = evStr match {
+        val event = evStr match {
           case EventStreamPattern(time, totalPointsT1, totalPointsT2, whoScored, pointsScored) => {
-            val event = GameEvent(Integer parseInt(time, 2), Integer.parseInt(totalPointsT1, 2), Integer.parseInt(totalPointsT2, 2), Integer.parseInt(whoScored, 2), Integer.parseInt(pointsScored, 2))
+
+            val event = GameEvent(parseInt(time, 2), parseInt(totalPointsT1, 2), parseInt(totalPointsT2, 2),
+              parseInt(whoScored, 2), parseInt(pointsScored, 2))
+
             val validation: ValidationNel[InvalidEvent, Boolean] = validateEvent(event)
-            if (validation.isSuccess) {
+
+            if (validation.isSuccess)
               Some(event)
-            } else {
+            else {
               validation match {
-                case scalaz.Failure(failureList) => failureList.foreach(_invalidEvents += _)
-                case scalaz.Success(ev) => ()
+                case scalaz.Failure(failureList) => failureList.foreach(_invalidEvents :+= _)
+                case scalaz.Success(_) => ()
               }
               None
             }
           }
         }
 
-        if (event.isDefined) events += event.get
+        // add to seq of events
+        event.foreach(events :+= _)
+
         event
-      case Failure(e) => None
+
+      case Failure(e) =>
+        // TODO adding logging here
+        None
     }
   }
 
-  def allEvents = if (events.isEmpty) Seq() else events
+  def allEvents = events
 
   def lastEvent: Option[GameEvent] = events.lastOption
 
